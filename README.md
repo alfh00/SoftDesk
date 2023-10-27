@@ -2,6 +2,8 @@
 
 SoftDesk API allows you to manage projects, issues, and comments. It provides functionalities for support management like creating projects, adding contributors, creating and updating issues, and adding, updating, and deleting comments.
 
+[![Example Image]([https://example.com/image.jpg](https://user.oc-static.com/upload/2023/06/28/16879473703315_P10-02.png))] 
+
 ## Table of Contents
 
 - [Getting Started](#getting-started)
