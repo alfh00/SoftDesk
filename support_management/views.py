@@ -1,12 +1,13 @@
 from rest_framework import viewsets, status
 from rest_framework.generics import ListCreateAPIView, GenericAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.mixins import RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin
+from rest_framework.mixins import RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin, CreateModelMixin, ListModelMixin
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from .models import Project, Issue, Comment
 from .serializers import ProjectSerializer, ProjectCreateSerializer, IssueSerializer, IssueCreateSerializer, CommentSerializer
 from user_management.models import CustomUser as User
 from .permissions import IsContributor, IsAuthor, IsAuthorA
+from rest_framework.pagination import PageNumberPagination
 
 # Create your views here.
 
@@ -74,63 +75,70 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return Response({'message': 'Contributor not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-
-class IssueListCreateView(ListCreateAPIView):
+class IssueViewset(viewsets.ModelViewSet):
+    
     queryset = Issue.objects.all()
-    serializer_class = IssueSerializer
-    permission_classes = [IsContributor]
+    permission_classes = [IsContributor]  # Adjust the permission as needed
 
-    
-    def get_serializer_class(self):
-        # Return the appropriate serializer based on the view's action
-        if self.request.method == 'POST':
-            return IssueCreateSerializer  # Use IssueCreateSerializer for creating issues
-        return IssueSerializer 
+    def get_serializer_class(self, *args, **kwargs):
+        if self.action in ['create', 'update']:
+            return IssueCreateSerializer
+        return IssueSerializer
+        
+    def perform_create(self, serializer):
+        project_id = self.kwargs.get('project_id')
+        print(project_id)
+        serializer.validated_data['project'] = Project.objects.get(uuid=project_id)
+        serializer.validated_data['author'] = self.request.user
+        serializer.save()
+
+    @action(detail=True, methods=['POST'], permission_classes=[IsContributor])
+    def add_comment(self, request, project_id, pk=None):
+        issue = self.get_object()
+        text = request.data.get('text')
+
+        if text:
+            Comment.objects.create(text=text, author=request.user, issue=issue)
+            return Response({'message': 'Comment added successfully'}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({'message': 'Text field is required for adding a comment'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['PUT'], permission_classes=[IsAuthorA])
+    def update_comment(self, request, project_id, issue_id, pk=None):
+        comment = self.get_comment(pk)
+
+        if comment:
+            if comment.author == request.user:
+                text = request.data.get('text')
+
+                if text:
+                    comment.text = text
+                    comment.save()
+                    return Response({'message': 'Comment updated successfully'}, status=status.HTTP_200_OK)
+                else:
+                    return Response({'message': 'Text field is required for updating a comment'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({'message': 'You do not have permission to update this comment'}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            return Response({'message': 'Comment not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['DELETE'], permission_classes=[IsAuthorA])
+    def delete_comment(self, request, project_id, issue_id, pk=None):
+        comment = self.get_comment(pk)
+
+        if comment:
+            if comment.author == request.user:
+                comment.delete()
+                return Response({'message': 'Comment deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({'message': 'You do not have permission to delete this comment'}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            return Response({'message': 'Comment not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def get_comment(self, pk):
+        try:
+            return Comment.objects.get(pk=pk)
+        except Comment.DoesNotExist:
+            return None
 
 
-    def list(self, request, project_id):
-        # Custom logic to filter and return issues associated with the project
-        queryset = Issue.objects.filter(project_id=project_id)
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-
-    def create(self, request, project_id):
-        # Change the serializer class for creation
-        serializer = IssueCreateSerializer(data=request.data)
-
-        if serializer.is_valid():
-            # Get the project_id from the URL (you might need to adjust this depending on your URL structure)
-            project_id = self.kwargs.get('project_id')
-            author = self.request.user
-
-            # Get the project instance based on project_id
-            try:
-                project = Project.objects.get(pk=project_id)
-            except Project.DoesNotExist:
-                return Response({'message': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
-
-            # Assign the project to the issue and save it
-            serializer.save(project=project, author=author)
-
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-from rest_framework.decorators import action
-
-class IssueRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
-    
-    serializer_class = IssueSerializer
-    permission_classes = [IsContributor]
-
-    def get_queryset(self):
-        issue_id = self.kwargs.get('pk')
-        return Issue.objects.filter(uuid=issue_id)
-    
-
-    
-
-
-
-class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
-    serializer_class = CommentSerializer

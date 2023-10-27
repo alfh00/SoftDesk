@@ -33,6 +33,7 @@ class IssueSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class IssueCreateSerializer(serializers.ModelSerializer):
+    
     class Meta:
         model = Issue
-        exclude = ['project','author']
+        exclude = ['project', 'author']

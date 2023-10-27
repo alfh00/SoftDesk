@@ -33,6 +33,7 @@ class IsAuthor(permissions.BasePermission):
         return is_author
     
 class IsAuthorA(permissions.BasePermission):
+    message = 'must be the author here'
     def has_object_permission(self, request, view, obj):
         # Check if the user is the author of the object (project, issue, or comment)
         return obj.author == request.user
