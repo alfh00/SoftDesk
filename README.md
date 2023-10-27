@@ -72,7 +72,7 @@ python manage.py createsuperuser
 
 7. Start the development server:
 
-````bash
+```bash
 python manage.py runserver
 ```
 
