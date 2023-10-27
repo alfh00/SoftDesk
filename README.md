@@ -73,7 +73,8 @@ python manage.py createsuperuser
 7. Start the development server:
 
 ````bash
-python manage.py runserver```
+python manage.py runserver
+```
 
 ## API Endpoints
 
