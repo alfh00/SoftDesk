@@ -1,6 +1,6 @@
-# Project API Documentation
+# SoftDesk API Documentation
 
-This Django Rest Framework (DRF) API allows you to manage projects, issues, and comments. It provides functionalities like creating projects, adding contributors, creating and updating issues, and adding, updating, and deleting comments.
+SoftDesk API allows you to manage projects, issues, and comments. It provides functionalities for support management like creating projects, adding contributors, creating and updating issues, and adding, updating, and deleting comments.
 
 ## Table of Contents
 
